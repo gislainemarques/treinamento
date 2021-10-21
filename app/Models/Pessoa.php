@@ -14,5 +14,4 @@ class Pessoa extends Model
         'email',
     ];
 
-    protected $guarded
 }
