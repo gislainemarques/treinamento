@@ -28,16 +28,24 @@ Route::get('/treinamento', function(Request $request) {
 
 });
 
-//Pessoas route (inicial)
-
 Route::prefix('pessoas')->group(function() {
     Route::get('/', 'App\Http\Controllers\Api\PessoaController@index');
     Route::get('/{id}', 'App\Http\Controllers\Api\PessoaController@show');
+    Route::get('/{id}/carros', 'App\Http\Controllers\Api\PessoaController@carro');
     Route::post('/', 'App\Http\Controllers\Api\PessoaController@save');
     Route::put('/', 'App\Http\Controllers\Api\PessoaController@update');
     Route::patch('/', 'App\Http\Controllers\Api\PessoaController@update');
     Route::delete('/{id}', 'App\Http\Controllers\Api\PessoaController@delete');
+
+    Route::post('/{id}/carros', 'App\Http\Controllers\Api\PessoaController@saveCarro');
+    Route::delete('/{id}/carros/{placa}', 'App\Http\Controllers\Api\PessoaController@deleteCarro');
 });
 
+Route::prefix('carros')->group(function() {
+    Route::get('/', 'App\Http\Controllers\Api\CarroController@index');
+    Route::get('/{placa}', 'App\Http\Controllers\Api\CarroController@showCarroComPessoa');
+    Route::post('/', 'App\Http\Controllers\Api\CarroController@save');
+    Route::delete('/{id}', 'App\Http\Controllers\Api\CarroController@delete');
+});
 
 //Route::resource('/pessoas','App\Http\Controllers\Api\PessoaController');

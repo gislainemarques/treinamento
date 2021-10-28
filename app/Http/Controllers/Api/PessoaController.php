@@ -4,57 +4,118 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\Pessoa;
 use App\Http\Resources\PessoaResource;
+use App\Http\Resources\CarroCollection;
 use App\Http\Resources\PessoaCollection;
 use App\Http\Requests\PessoaRequest;
+use App\Http\Requests\CarroRequest;
+use App\Repositories\Contracts\PessoaRepositoryInterface;
+use App\Repositories\Contracts\CarroRepositoryInterface;
 
 class PessoaController extends Controller
 {
-    private $pessoa;
-        
-    public function __construct(Pessoa $pessoa) {
-        $this->pessoa = $pessoa;
+    private $pessoaRepository;
+    private $carroRepository;
+
+    public function __construct(PessoaRepositoryInterface $pessoaRepository,
+                                CarroRepositoryInterface $carroRepository) {
+        $this->pessoaRepository = $pessoaRepository;
+        $this->carroRepository = $carroRepository;
+
     }
 
     public function index() {
-        $pessoas = $this->pessoa->paginate(2);
-        //return response()->json($pessoas);
+        $pessoas = $this->pessoaRepository->all();
         return new PessoaCollection($pessoas);
     }
 
     public function show($id) {
-        $pessoa = $this->pessoa->find($id);
-        
-        //return response()->json($pessoa);
+        $pessoa = $this->pessoaRepository->find($id);
         return new PessoaResource($pessoa);
     }
 
     public function save(PessoaRequest $request) {
         $data = $request->all();
 
-        $pessoa = Pessoa::where('email', $data['email'])->first();
- 
-        if ($pessoa) {
-            return response()->json(['data' => ['msg' => 'Email já cadastrado.']]);
-        } else {
-            $pessoa = $this->pessoa->create($data);
-            return response()->json($pessoa);
+        try {
+            $pessoa = $this->pessoaRepository->findFirstByEmail($data['email']);
+
+            if ($pessoa) {
+                throw new \Exception("Email já cadastrado.");
+            }
+
+            $pessoa = $this->pessoaRepository->create($data);
+            return new PessoaResource($pessoa);
+
+            
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 401);
         }
     }
 
     public function update(Request $request) {
         $data = $request->only('id','nome','telefone');
-        $pessoa = $this->pessoa->find($data['id']);
-        $pessoa->update($data);
-        return response()->json($pessoa);
+        try {
+            $pessoa = $this->pessoaRepository->update($data['id'], $data);
+            return new PessoaResource($pessoa);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 401);
+        }
     }
 
 
     public function delete($id) {
-        $pessoa = $this->pessoa->find($id);
-        $pessoa->delete($pessoa);
-        return response()->json(['data' => ['msg' => 'Pessoa removida com sucesso.']]);
+        try {
+            $pessoa = $this->pessoaRepository->findOrFail($id);
+            $this->pessoaRepository->deleteById($id);
+            return response()->json(['data' => ['msg' => 'Pessoa removida com sucesso.']]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 401);
+        }
     }
 
+    public function carro($id) {
+        try {
+            $pessoa = $this->pessoaRepository->findOrFail($id);
+            return new CarroCollection($pessoa->carros);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 401);
+        }
+    }
+
+    public function saveCarro(CarroRequest $request, $pessoa_id) {
+        $data = $request->all();
+
+        try {
+            $pessoa = $this->pessoaRepository->find($pessoa_id);
+
+            $carro = $this->carroRepository->findFirstByPlaca($data['placa']);
+
+            if ($carro) {
+                throw new \Exception("Carro já possui proprietário.");
+            }
+
+            $this->pessoaRepository->createCarro($pessoa, $data);
+
+            return new CarroCollection($pessoa->carros);
+
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 401);
+        }
+
+    }
+
+    public function deleteCarro($id, $placa) {
+        try {
+
+            $carro = $this->carroRepository->findFirstOrFailByPessoaIdPlaca($id, $placa);
+
+            $this->carroRepository->delete($carro);
+
+            return response()->json(['data' => ['msg' => 'Carro removido com sucesso.']]);
+
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 401);
+        }
+    }
 }
