@@ -47,5 +47,3 @@ Route::prefix('carros')->group(function() {
     Route::post('/', 'App\Http\Controllers\Api\CarroController@save');
     Route::delete('/{id}', 'App\Http\Controllers\Api\CarroController@delete');
 });
-
-//Route::resource('/pessoas','App\Http\Controllers\Api\PessoaController');
